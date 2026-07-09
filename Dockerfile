@@ -1,0 +1,21 @@
+FROM nvidia/cuda:12.6.3-runtime-ubuntu22.04
+
+RUN apt-get update && apt-get install -y \
+    python3.10 python3.10-dev python3-pip \
+    libgl1-mesa-glx libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.10 1
+RUN python -m pip install --upgrade pip
+
+RUN pip install --no-cache-dir paddlepaddle-gpu==3.2.1 \
+    -i https://www.paddlepaddle.org.cn/packages/stable/cu126/
+
+RUN pip install --no-cache-dir "paddleocr[doc-parser]" python-multipart uvicorn fastapi requests
+
+COPY server.py /home/paddleocr/server.py
+COPY --chmod=0755 start.sh /start.sh
+
+WORKDIR /home/paddleocr
+EXPOSE 8080
+CMD ["/bin/bash", "/start.sh"]
