@@ -3,10 +3,6 @@ name: Build & Push PaddleOCR-VL Docker
 on:
   push:
     branches: [main]
-    paths:
-      - 'Dockerfile'
-      - 'server.py'
-      - 'start.sh'
 
   workflow_dispatch:
 
