@@ -1,4 +1,4 @@
-name: Build & Push PaddleOCR-VL Docker
+name: Build & Push PaddleOCR Docker Images
 
 on:
   push:
@@ -7,7 +7,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-vl:
+    name: Build PaddleOCR-VL
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -28,5 +29,31 @@ jobs:
             -t docker.io/kapteng/paddleocr-vl-scan:latest \
             --cache-from type=registry,ref=docker.io/kapteng/paddleocr-vl-scan:cache \
             --cache-to type=registry,ref=docker.io/kapteng/paddleocr-vl-scan:cache,mode=max \
+            --push \
+            .
+
+  build-classic:
+    name: Build PaddleOCR Classic
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Login to Docker Hub
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+        run: echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
+
+      - name: Build and push
+        run: |
+          docker buildx build --platform linux/amd64 \
+            -f Dockerfile.classic \
+            -t docker.io/kapteng/paddleocr-classic:latest \
+            --cache-from type=registry,ref=docker.io/kapteng/paddleocr-classic:cache \
+            --cache-to type=registry,ref=docker.io/kapteng/paddleocr-classic:cache,mode=max \
             --push \
             .
