@@ -12,10 +12,15 @@ executor = ThreadPoolExecutor(max_workers=4)
 pipeline = create_pipeline(pipeline="PaddleOCR-VL")
 
 def predict_sync(image_path: str) -> dict:
-    for res in pipeline.predict(image_path):
-        md = getattr(res, "markdown", None) or ""
-        return {"markdown": md.strip(), "status": "ok"}
-    return {"markdown": "", "status": "empty"}
+    try:
+        for res in pipeline.predict(image_path):
+            md = getattr(res, "markdown", None) or ""
+            if isinstance(md, dict):
+                md = "\n".join(v for v in md.values() if isinstance(v, str))
+            return {"markdown": md.strip(), "status": "ok"}
+        return {"markdown": "", "status": "empty"}
+    except Exception as e:
+        return {"markdown": "", "status": "error", "error": str(e)}
 
 async def predict_async(image_path: str) -> dict:
     loop = asyncio.get_event_loop()
