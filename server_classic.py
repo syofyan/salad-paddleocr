@@ -100,30 +100,64 @@ def make_markdown(ocr_items, layout_items):
     return "\n\n".join(s for s in sections if s).strip()
 
 
+def _inspect(obj):
+    attrs = {}
+    for a in dir(obj):
+        if not a.startswith("_"):
+            try:
+                v = getattr(obj, a)
+                if callable(v):
+                    attrs[a] = "callable"
+                elif isinstance(v, (list, tuple)):
+                    attrs[a] = f"{type(v).__name__}[{len(v)}]"
+                    if len(v) > 0:
+                        attrs[a + "_elem_type"] = str(type(v[0]))
+                        if hasattr(v[0], "__dict__"):
+                            attrs[a + "_elem_attrs"] = list(v[0].__dict__.keys())
+                else:
+                    attrs[a] = str(type(v))
+            except:
+                attrs[a] = "?error"
+    return attrs
+
 def predict_sync(image_path: str) -> dict:
     try:
         for res in pipeline.predict(image_path):
             ocr_items = []
             for ocr_res in getattr(res, "ocr_res", []) or []:
                 ocr_items.append({
-                    "text": ocr_res.text,
-                    "bbox": ocr_res.bbox,
-                    "score": ocr_res.score,
+                    "text": ocr_res if isinstance(ocr_res, str) else (ocr_res.text if hasattr(ocr_res, "text") else str(ocr_res)),
+                    "bbox": ocr_res.bbox if hasattr(ocr_res, "bbox") else [],
+                    "score": ocr_res.score if hasattr(ocr_res, "score") else 0,
                 })
 
             layout_items = []
             for layout_res in getattr(res, "layout_res", []) or []:
                 layout_items.append({
-                    "label": layout_res.label,
-                    "bbox": layout_res.bbox,
-                    "score": layout_res.score,
+                    "label": layout_res.label if hasattr(layout_res, "label") else str(layout_res),
+                    "bbox": layout_res.bbox if hasattr(layout_res, "bbox") else [],
+                    "score": layout_res.score if hasattr(layout_res, "score") else 0,
                 })
+
+            if not ocr_items and not layout_items:
+                return {
+                    "markdown": "", "status": "ok",
+                    "_debug": {
+                        "res_type": str(type(res)),
+                        "res_attrs": _inspect(res),
+                        "has_ocr_res": hasattr(res, "ocr_res"),
+                        "ocr_res_raw": str(getattr(res, "ocr_res", "N/A"))[:500],
+                        "has_layout_res": hasattr(res, "layout_res"),
+                        "layout_res_raw": str(getattr(res, "layout_res", "N/A"))[:500],
+                    }
+                }
 
             md = make_markdown(ocr_items, layout_items)
             return {"markdown": md, "status": "ok"}
         return {"markdown": "", "status": "empty"}
     except Exception as e:
-        return {"markdown": "", "status": "error", "error": str(e)}
+        import traceback
+        return {"markdown": "", "status": "error", "error": str(e), "traceback": traceback.format_exc()}
 
 
 async def predict_async(image_path: str) -> dict:
