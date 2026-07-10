@@ -140,15 +140,14 @@ def predict_sync(image_path: str) -> dict:
                 })
 
             if not ocr_items and not layout_items:
+                json_data = getattr(res, "json", res.get("json", {})) if hasattr(res, "get") else {}
                 return {
                     "markdown": "", "status": "ok",
                     "_debug": {
                         "res_type": str(type(res)),
                         "res_attrs": _inspect(res),
-                        "has_ocr_res": hasattr(res, "ocr_res"),
-                        "ocr_res_raw": str(getattr(res, "ocr_res", "N/A"))[:500],
-                        "has_layout_res": hasattr(res, "layout_res"),
-                        "layout_res_raw": str(getattr(res, "layout_res", "N/A"))[:500],
+                        "json_keys": list(json_data.keys()) if isinstance(json_data, dict) else str(type(json_data)),
+                        "json_preview": str(json_data)[:1000] if isinstance(json_data, dict) else str(json_data)[:500],
                     }
                 }
 
